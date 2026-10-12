@@ -1,31 +1,27 @@
-# SSB ULTRA GODSCOPE v3.4.0-swarm24-armed
+# SSB ULTRA GODSCOPE v3.5.0-godmode
 
-Single-file monolith (zipapp). 21,371 wired routes across 7 bridges:
-native (74) · z-seed CLI (146) · dragon verbs (23) · wave powers (20,692) · swarm-12 expansion (260) · swarm-24 expansion (176) · godscope map/layers/selftest.
+Single-file monolith (zipapp). **21,375 wired routes**, every expansion power **armed:true**, no simulation.
 
-Every expansion power ships **armed:true** — mutations apply by default; pass `{"arm": false}` to dry-run.
-No simulation stubs: every power performs real syscalls/sysfs/procfs/ioctl work or returns an honest error.
+## Godmode commands (new)
+- `godscope.eval` — unrestricted Python eval/exec inside the live runtime (`dispatch` + `seed` in scope)
+- `godscope.inject` — local injection primitives: `maps`, `mem_write` (/proc/pid/mem), `ptrace_write` (PTRACE_POKEDATA), `ld_preload_gen`, `dlopen_gen`
+- `godscope.sweep` — executes every route and classifies executed/error/stub (filters: kind, category, limit, workers)
+- `godscope.unlock` — rearms dragon guards (1,821), sets SSB_UNRESTRICTED, confirms armed state
 
-## Swarm-24 modules (nm21.*)
-access (sudoers/polkit/ACL/key grants) · caps (capability control + priv-esc matrix) · kernctl (sysctl/module/kprobe control) · systemd (units/timers/journal/drop-ins) · ns (namespaces/cgroups/netns) · secmod (SELinux/AppArmor/seccomp) · audit (auditd rules/log forensics/integrity) · fsctl (mounts/overlay/immutable/quotas) · netctl (nftables/tc/raw packets/vxlan) · boot (bootloader/initramfs/EFI/kexec) · sched (affinity/RT/rlimits/OOM) · vault (keyctl/gpg/ssh-agent/secret scans/JWT)
+## Bridges
+native (78) · z-seed CLI (146) · dragon verbs (23) · wave powers (20,692) · swarm-12 nm20 (260) · swarm-24 nm21 (176) · godscope
 
 ## Rebuild
 ```
 cat SSB_ULTRA_GODSCOPE.py.part_* > SSB_ULTRA_GODSCOPE.py
 chmod +x SSB_ULTRA_GODSCOPE.py
-sha256sum SSB_ULTRA_GODSCOPE.py   # 58a46adfc343713e97cc229e375d1faadf15f6303d9a81786d0c0b484e5c7c38
+sha256sum SSB_ULTRA_GODSCOPE.py   # 4256e15c14576566a3fd05cbfbebd2d3e736d3a873de30d4945e536afd40fb13
 ```
 
 ## Run
 ```
-python3 SSB_ULTRA_GODSCOPE.py                          # status (v3.4.0-swarm24)
-python3 SSB_ULTRA_GODSCOPE.py godscope.selftest        # 12-leg wiring proof
-python3 SSB_ULTRA_GODSCOPE.py --godscope               # dump full wiring seed
-python3 SSB_ULTRA_GODSCOPE.py --serve --port 8787      # HTTP API + MCP
-python3 SSB_ULTRA_GODSCOPE.py nm21.kernctl.sysctl_dump --json '{"prefix":"kernel"}'
-python3 SSB_ULTRA_GODSCOPE.py power.nm21.caps.priv_esc_cap_matrix --json '{}'
+python3 SSB_ULTRA_GODSCOPE.py godscope.unlock
+python3 SSB_ULTRA_GODSCOPE.py godscope.eval --json '{"code":"dispatch(\"nm21.caps.priv_esc_cap_matrix\",{})"}'
+python3 SSB_ULTRA_GODSCOPE.py godscope.sweep --json '{"kind":"swarm24_expansion"}'
+python3 SSB_ULTRA_GODSCOPE.py --serve --port 8787     # HTTP + MCP
 ```
-
-- `SSB_WIRING_SEED.json` — every route + binding (any AI can load this to see everything SSB can do)
-- `expansion/` — swarm-12 modules (nm20.*, armed) · `expansion2/` — swarm-24 modules (nm21.*, armed)
-- `REASSEMBLE_SSB_ULTRA_v2.py` — rebuilds the base archive from the 25 base64 text chunks
