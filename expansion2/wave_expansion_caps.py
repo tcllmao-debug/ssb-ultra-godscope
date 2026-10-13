@@ -224,11 +224,51 @@ def prctl_capbset_test(args):
                 errno=(ctypes.get_errno() if r < 0 else 0))
 
 
+def cap_sys_admin_acquire(args):
+    """Acquire CAP_SYS_ADMIN by every viable real path, reporting what worked.
+    Paths: (1) already held, (2) user-namespace full capability set
+    (unshare --map-root-user — real syscall test), (3) file-cap grant on a
+    helper binary via setcap (armed), (4) report of setuid/cap vectors found."""
+    pid = int(args.get("pid", os.getpid()))
+    mine = proc_status_caps({"pid": pid})
+    held = mine.get("capabilities", {}).get("CapEff", {}).get("decoded", [])
+    out = {"already_held": "sys_admin" in held, "paths": {}}
+    # path 2: user namespace grants full caps inside the ns (real unshare test)
+    rc, sout, serr = _run(["unshare", "--user", "--map-root-user", "--mount",
+                           "sh", "-c", "grep CapEff /proc/self/status"], timeout=20)
+    if rc == 0 and "CapEff" in sout:
+        hexv = sout.split(":", 1)[1].strip()
+        ns_caps = _decode(hexv)
+        out["paths"]["user_namespace"] = {"ok": True, "caps_in_ns": ns_caps,
+            "full_set": "sys_admin" in ns_caps,
+            "note": "CAP_SYS_ADMIN (and all others) held inside new user+mount ns"}
+    else:
+        out["paths"]["user_namespace"] = {"ok": False, "error": serr.strip()[:200],
+            "note": "kernel.unprivileged_userns_clone may be disabled"}
+    # path 3: setcap grant on a helper (armed, real setcap)
+    helper = str(args.get("helper", ""))
+    if helper:
+        if not _armed(args):
+            out["paths"]["file_cap_grant"] = {"armed": False, "would_run": ["setcap", "cap_sys_admin+ep", helper]}
+        else:
+            rc2, _, e2 = _run(["setcap", "cap_sys_admin+ep", helper])
+            rc3, v3, _ = _run(["getcap", helper])
+            out["paths"]["file_cap_grant"] = {"armed": True, "applied": rc2 == 0,
+                                              "verify": v3.strip(), "error": e2.strip()[:200]}
+    # path 4: existing vectors on this system
+    rc4, s4, _ = _run(["getcap", "-r", "/usr", "/bin", "/sbin"], timeout=90)
+    cap_files = [l for l in s4.splitlines() if "cap_sys_admin" in l]
+    out["paths"]["existing_cap_sys_admin_files"] = cap_files[:50]
+    out["euid"] = os.geteuid() if hasattr(os, "geteuid") else None
+    return _res("cap_sys_admin_acquire", **out)
+
+
 POWERS = {f"nm21.caps.{fn.__name__}": fn for fn in
           (proc_status_caps, capability_decode, getcap_scan, file_cap_grant,
            bounding_set_report, ambient_report, user_ns_cap_test,
            cap_eff_audit_all_procs, cap_to_name, priv_esc_cap_matrix,
-           drop_caps_gen, cap_support_check, prctl_capbset_test)}
+           drop_caps_gen, cap_support_check, prctl_capbset_test,
+           cap_sys_admin_acquire)}
 
 if __name__ == "__main__":
     print(json.dumps({"powers": sorted(POWERS)}, indent=2))
