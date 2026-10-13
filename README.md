@@ -1,27 +1,24 @@
-# SSB ULTRA GODSCOPE v3.5.0-godmode
+# SSB ULTRA GODSCOPE v3.5.1-godmode
 
-Single-file monolith (zipapp). **21,375 wired routes**, every expansion power **armed:true**, no simulation.
+Single-file monolith (zipapp). **21,376 wired routes**, all expansion powers armed:true, no simulation.
 
-## Godmode commands (new)
-- `godscope.eval` — unrestricted Python eval/exec inside the live runtime (`dispatch` + `seed` in scope)
-- `godscope.inject` — local injection primitives: `maps`, `mem_write` (/proc/pid/mem), `ptrace_write` (PTRACE_POKEDATA), `ld_preload_gen`, `dlopen_gen`
-- `godscope.sweep` — executes every route and classifies executed/error/stub (filters: kind, category, limit, workers)
-- `godscope.unlock` — rearms dragon guards (1,821), sets SSB_UNRESTRICTED, confirms armed state
+## v3.5.1 — 12-lane swarm audit fixes
+- **Transport fix**: HTTP `/run`, `/commands`, and MCP were broken since v3.3 (expansion entries crashed the catalog builder) — fixed; 10,725 commands now served.
+- **Fork isolation**: every `/run` dispatch executes in a forked worker — a segfaulting/hanging/`os._exit`-ing power can never kill the daemon. 300s worker timeout. `SSB_NO_FORK=1` disables.
+- **Dragon warmup**: serve() pre-boots the 20,692-power wave registry so forked workers inherit it via COW.
+- **`nm21.caps.cap_sys_admin_acquire`** — CAP_SYS_ADMIN acquisition: held-check, user-namespace full-cap path (verified working), setcap grant, existing-vector scan.
+- 500 responses now include exception detail.
 
-## Bridges
-native (78) · z-seed CLI (146) · dragon verbs (23) · wave powers (20,692) · swarm-12 nm20 (260) · swarm-24 nm21 (176) · godscope
+## 12-lane swarm verification (1,309 live invocations, daemon survived)
+880 executed clean; failures were honest arg/root/feature reports. Transports: HTTP 4/4 + MCP initialize/tools/call verified.
+Per-bridge: wave kernel 155/226 · wave random 84/400 · native 18/78 · z CLI 128/146 · dragon verbs 16/23 · swarm12 216/260 · swarm24 117/176 · catalog 143/200.
+
+## Godmode commands
+`godscope.eval` (unrestricted exec in runtime) · `godscope.inject` (mem/ptrace/LD_PRELOAD) · `godscope.sweep` (execute-all verifier) · `godscope.unlock`
 
 ## Rebuild
 ```
 cat SSB_ULTRA_GODSCOPE.py.part_* > SSB_ULTRA_GODSCOPE.py
 chmod +x SSB_ULTRA_GODSCOPE.py
-sha256sum SSB_ULTRA_GODSCOPE.py   # 4256e15c14576566a3fd05cbfbebd2d3e736d3a873de30d4945e536afd40fb13
-```
-
-## Run
-```
-python3 SSB_ULTRA_GODSCOPE.py godscope.unlock
-python3 SSB_ULTRA_GODSCOPE.py godscope.eval --json '{"code":"dispatch(\"nm21.caps.priv_esc_cap_matrix\",{})"}'
-python3 SSB_ULTRA_GODSCOPE.py godscope.sweep --json '{"kind":"swarm24_expansion"}'
-python3 SSB_ULTRA_GODSCOPE.py --serve --port 8787     # HTTP + MCP
+sha256sum SSB_ULTRA_GODSCOPE.py   # 0e00367e55a677684175017d07631a4384aca8bd8a602b26bc8706ef342848df
 ```
